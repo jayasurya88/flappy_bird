@@ -7,72 +7,212 @@
     <style>
         body {
             margin: 0;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            background-color: #f4f4f9;
+            background-image: linear-gradient(135deg, #a8edea, #fed6e3);
         }
-        canvas {
+
+        #gameCanvas {
+            border: 4px solid #444;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             display: block;
+            margin-top: 20px;
+            max-width: 100%;
+            transition: transform 0.2s ease;
+        }
+
+        #restartBtn, #saveScoreBtn {
+            padding: 12px 24px;
+            font-size: 18px;
+            margin: 15px;
+            border-radius: 10px;
+            background-color: #009688;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        #restartBtn:hover, #saveScoreBtn:hover {
+            background-color: #00796b;
+            transform: translateY(-3px);
+        }
+
+        #nav {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            margin-bottom: 10px;
+        }
+
+        #nav a {
+            text-decoration: none;
+            font-size: 18px;
+            color: #00796b;
+            margin: 0 15px;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        #nav a:hover {
+            color: #004d40;
+        }
+
+        #scoreDisplay {
+            font-size: 28px;
+            font-weight: bold;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Make the game responsive for mobile */
+        @media (max-width: 600px) {
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+
+            #scoreDisplay {
+                font-size: 24px;
+                padding: 8px 16px;
+            }
+
+            #restartBtn, #saveScoreBtn {
+                font-size: 16px;
+                padding: 10px 20px;
+            }
+
+            #nav a {
+                font-size: 14px;
+                margin: 0 10px;
+            }
+        }
+
+        /* Game Over Screen */
+        .gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 30px 50px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .gameOverScreen h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .gameOverScreen button {
+            padding: 12px 20px;
+            font-size: 18px;
+            background-color: #009688;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+
+        .gameOverScreen button:hover {
+            background-color: #00796b;
+            transform: translateY(-3px);
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    <div id="nav">
+        <a href="/leaderboard/">Leaderboard</a>
+        <a href="/logout/">Logout</a>
+    </div>
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    <!-- Game Score -->
+    <div id="scoreDisplay">Score: 0</div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" width="500" height="600"></canvas>
+
+    <!-- Game Over Screen -->
+    <div class="gameOverScreen" id="gameOverScreen">
+        <h2>Game Over</h2>
+        <button id="restartBtn">Restart</button>
+        <button id="saveScoreBtn">Save Score</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const restartBtn = document.getElementById("restartBtn");
+        const saveScoreBtn = document.getElementById("saveScoreBtn");
+        const scoreDisplay = document.getElementById("scoreDisplay");
+        const gameOverScreen = document.getElementById("gameOverScreen");
 
         let bird = { x: 50, y: canvas.height / 2, size: 20, dy: 0, gravity: 0.5 };
         let pipes = [];
-        let frame = 0;
         let score = 0;
+        let frame = 0;
+        let gameOver = false;
 
+        // Draw bird
         function drawBird() {
-            ctx.fillStyle = 'yellow';
+            ctx.fillStyle = "yellow";
             ctx.beginPath();
             ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
             ctx.fill();
         }
 
+        // Draw pipes
         function drawPipes() {
-            ctx.fillStyle = 'green';
+            ctx.fillStyle = "green";
             pipes.forEach(pipe => {
                 ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
                 ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipe.width, pipe.bottom);
             });
         }
 
-        function movePipes() {
-            pipes.forEach(pipe => {
-                pipe.x -= 2;
-            });
-
-            if (frame % 100 === 0) {
-                const gap = 150;
-                const top = Math.random() * (canvas.height / 2);
-                const bottom = canvas.height - (top + gap);
-                pipes.push({ x: canvas.width, top, bottom, width: 50 });
-            }
-
-            pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
-        }
-
-        function drawScore() {
-            ctx.fillStyle = 'black';
-            ctx.font = '24px Arial';
-            ctx.fillText(`Score: ${score}`, 10, 30);
-        }
-
+        // Update bird
         function updateBird() {
             bird.dy += bird.gravity;
             bird.y += bird.dy;
-
-            if (bird.y + bird.size > canvas.height || bird.y - bird.size < 0) {
-                resetGame();
+            if (bird.y + bird.size > canvas.height) {
+                endGame();
             }
         }
 
+        // Generate pipes
+        function generatePipes() {
+            if (frame % 150 === 0) {
+                const gap = 150;
+                const top = Math.random() * (canvas.height - gap - 50);
+                const bottom = canvas.height - top - gap;
+                pipes.push({ x: canvas.width, width: 40, top, bottom });
+            }
+        }
+
+        // Move pipes
+        function movePipes() {
+            pipes.forEach(pipe => (pipe.x -= 2));
+            pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
+        }
+
+        // Check collision
         function checkCollision() {
             pipes.forEach(pipe => {
                 if (
@@ -80,22 +220,67 @@
                     bird.x - bird.size < pipe.x + pipe.width &&
                     (bird.y - bird.size < pipe.top || bird.y + bird.size > canvas.height - pipe.bottom)
                 ) {
-                    resetGame();
+                    endGame();
                 }
             });
         }
 
-        function resetGame() {
-            bird.y = canvas.height / 2;
-            bird.dy = 0;
-            pipes = [];
-            score = 0;
+        // Draw score
+        function drawScore() {
+            scoreDisplay.textContent = `Score: ${score}`;
         }
 
-        window.addEventListener('keydown', () => {
-            bird.dy = -8;
+        // End game
+        function endGame() {
+            gameOver = true;
+            gameOverScreen.style.display = "block"; // Show game over screen
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        // Reset game
+        function resetGame() {
+            bird = { x: 50, y: canvas.height / 2, size: 20, dy: 0, gravity: 0.5 };
+            pipes = [];
+            score = 0;
+            frame = 0;
+            gameOver = false;
+            gameOverScreen.style.display = "none"; // Hide game over screen
+            gameLoop();
+        }
+
+        // Save score
+        async function saveScore() {
+            await fetch("/save_score/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({ score }),
+            });
+            alert("Score saved!");
+            saveScoreBtn.style.display = "none";
+        }
+
+        saveScoreBtn.addEventListener("click", saveScore);
+        restartBtn.addEventListener("click", resetGame);
+
+        // Handle jumping (space key or touch)
+        document.addEventListener("keydown", function(event) {
+            if (event.code === "Space" && !gameOver) {
+                bird.dy = -8;  // Jump force
+            }
         });
 
+        // Mobile touch support: jump when the screen is tapped
+        canvas.addEventListener("touchstart", function(event) {
+            event.preventDefault();  // Prevent scrolling
+            if (!gameOver) {
+                bird.dy = -8;  // Jump force
+            }
+        });
+
+        let animationFrameId;
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawBird();
@@ -104,10 +289,13 @@
             updateBird();
             movePipes();
             checkCollision();
+            generatePipes();
 
-            frame++;
-            score++;
-            requestAnimationFrame(gameLoop);
+            if (!gameOver) {
+                frame++;
+                score++;
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
         }
 
         gameLoop();
